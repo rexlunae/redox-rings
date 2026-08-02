@@ -3,6 +3,14 @@ name = "redox-rings"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["std", "sync", "userspace"]
+std = ["libredox"]
+sync = []
+userspace = []
+
 [dependencies]
-redox_syscall = "0.5.18"
-libredox = { git = "https://gitlab.redox-os.org/Ibuki.O/libredox.git", branch = "extern-futex-dev", default-features = false, features = ["redox_syscall", "call"] }
+libredox = { version = "0.1.18", default-features = false, features = ["redox_syscall", "call"], optional = true}
+redox_syscall = "0.9.0"
+zerocopy = { version = "0.8.55", features = ["derive"] }
+bitflags = "2.13.1"
