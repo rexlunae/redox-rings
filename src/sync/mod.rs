@@ -38,7 +38,7 @@ pub struct RawBlockingProducer<'a, T, W: WaitNotify> {
     pub waiter: W,
 }
 
-unsafe impl<'a, T: Send, W: WaitNotify> Send for RawBlockingConsumer<'a, T, W> {}
+unsafe impl<'a, T: Send, W: WaitNotify> Send for RawBlockingProducer<'a, T, W> {}
 
 impl<'a, T, W: WaitNotify> RawBlockingProducer<'a, T, W> {
     pub fn new(inner: RawProducer<'a, T>, waiter: W) -> Self {
@@ -81,7 +81,7 @@ pub struct RawBlockingConsumer<'a, T, W: WaitNotify> {
     pub waiter: W,
 }
 
-unsafe impl<'a, T: Send, W: WaitNotify> Send for RawBlockingProducer<'a, T, W> {}
+unsafe impl<'a, T: Send, W: WaitNotify> Send for RawBlockingConsumer<'a, T, W> {}
 
 impl<'a, T, W: WaitNotify> RawBlockingConsumer<'a, T, W> {
     pub fn new(inner: RawConsumer<'a, T>, waiter: W) -> Self {
@@ -165,7 +165,7 @@ impl<'ring, T> RawProducer<'ring, T> {
                         let fresh_head = self.header.head.load(Ordering::Acquire) & INDEX_MASK;
                         if fresh_head != current_head {
                             self.header
-                                .head
+                                .tail
                                 .store(current_tail_logical, Ordering::Relaxed);
                             continue 'outer;
                         }
@@ -229,7 +229,7 @@ impl<'ring, T> RawProducer<'ring, T> {
                         let fresh_head = self.header.head.load(Ordering::Acquire) & INDEX_MASK;
                         if fresh_head != current_head {
                             self.header
-                                .head
+                                .tail
                                 .store(current_tail_logical, Ordering::Relaxed);
                             continue 'outer;
                         }
