@@ -72,8 +72,7 @@ impl<Item: 'static, const IS_PRODUCER: bool> Ring<Item, IS_PRODUCER> {
             libredox::call::ftruncate(fd.raw(), total_size)?;
             (total_size.next_multiple_of(syscall::PAGE_SIZE), nr_entries)
         } else {
-            let mut stat = syscall::data::Stat::default();
-            syscall::fstat(fd.raw(), &mut stat)?;
+            let stat = fd.stat()?;
             let total_size = stat.st_size as usize;
             let nr_entries = (total_size - HEADER_MMAP_OFFSET) / item_size;
 
