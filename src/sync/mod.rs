@@ -1,6 +1,6 @@
 use crate::raw::{RawConsumer, RawProducer, RingPopError, RingPushError, INDEX_MASK, WAITING_BIT};
 use core::ops::{Deref, DerefMut};
-use core::sync::atomic::Ordering;
+use core::sync::atomic::{Ordering, fence};
 use syscall::data::TimeSpec;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -172,6 +172,8 @@ impl<'ring, T> RawProducer<'ring, T> {
                         core::hint::spin_loop();
                     }
                     self.header.tail.store(tail_with_flag, Ordering::Release);
+                    // Pairs with the fence in `is_wait_tail`: see there.
+                    fence(Ordering::SeqCst);
 
                     let fresh_head = self.header.head.load(Ordering::Acquire) & INDEX_MASK;
                     if fresh_head != current_head {
@@ -236,6 +238,8 @@ impl<'ring, T> RawProducer<'ring, T> {
                         core::hint::spin_loop();
                     }
                     self.header.tail.store(tail_with_flag, Ordering::Release);
+                    // Pairs with the fence in `is_wait_tail`: see there.
+                    fence(Ordering::SeqCst);
 
                     let fresh_head = self.header.head.load(Ordering::Acquire) & INDEX_MASK;
                     if fresh_head != current_head {
@@ -309,6 +313,8 @@ impl<'ring, T> RawConsumer<'ring, T> {
                         core::hint::spin_loop();
                     }
                     self.header.head.store(head_with_flag, Ordering::Release);
+                    // Pairs with the fence in `is_wait_head`: see there.
+                    fence(Ordering::SeqCst);
 
                     let fresh_tail = self.header.tail.load(Ordering::Acquire) & INDEX_MASK;
                     if fresh_tail != current_tail {
@@ -368,6 +374,8 @@ impl<'ring, T> RawConsumer<'ring, T> {
                         core::hint::spin_loop();
                     }
                     self.header.head.store(head_with_flag, Ordering::Release);
+                    // Pairs with the fence in `is_wait_head`: see there.
+                    fence(Ordering::SeqCst);
 
                     let fresh_tail = self.header.tail.load(Ordering::Acquire) & INDEX_MASK;
                     if fresh_tail != current_tail {
