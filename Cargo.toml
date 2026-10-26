@@ -15,8 +15,9 @@ redox_syscall = "0.9.0"
 zerocopy = { version = "0.8.55", features = ["derive"] }
 bitflags = "2.13.1"
 
-# The wait-protocol model checks in `sync::tests` (`RUSTFLAGS="--cfg loom"`); loom is MIT.
-[target.'cfg(loom)'.dependencies]
+# The wait-protocol model checks in `sync::tests` (`RUSTFLAGS="--cfg loom" cargo test --lib`);
+# loom is MIT. A dev-dependency, so it stays out of the lockfiles of crates that use this one.
+[target.'cfg(loom)'.dev-dependencies]
 loom = "0.7"
 
 [lints.rust]

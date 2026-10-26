@@ -21,7 +21,7 @@
 //!
 //! ```sh
 //! cargo +nightly test --no-default-features --features sync
-//! RUSTFLAGS="--cfg loom" cargo +nightly test --release --no-default-features --features sync
+//! RUSTFLAGS="--cfg loom" cargo +nightly test --lib --release --no-default-features --features sync
 //! ```
 
 extern crate std;
