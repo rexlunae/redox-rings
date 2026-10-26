@@ -1,6 +1,6 @@
 use crate::raw::{RawConsumer, RawProducer, RingPopError, RingPushError, INDEX_MASK, WAITING_BIT};
 use core::ops::{Deref, DerefMut};
-use core::sync::atomic::{Ordering, fence};
+use crate::atomic::{Ordering, fence};
 use syscall::data::TimeSpec;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -111,7 +111,11 @@ impl<'a, T, W: WaitNotify> DerefMut for RawBlockingConsumer<'a, T, W> {
 
 // TODO: How many spins should we do before it becomes more time-economical to enter kernel mode
 // via futexes?
-pub const SPIN_COUNT: usize = 100;
+/// How many times a blocking push or pop re-reads the other index before it sets its waiting bit.
+///
+/// A loom model explores every interleaving of each load in the spin, so it uses one iteration;
+/// spinning only shortens the wait and does not change what the handshake guarantees.
+pub const SPIN_COUNT: usize = if cfg!(loom) { 1 } else { 100 };
 
 impl<'ring, T> RawProducer<'ring, T> {
     pub fn try_push_notify<W: WaitNotify>(
@@ -400,6 +404,9 @@ impl<'ring, T> RawConsumer<'ring, T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 #[cfg(feature = "userspace")]
 pub mod user;

@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use core::mem;
 use core::mem::MaybeUninit;
 use core::ops;
-use core::sync::atomic::AtomicU32;
-use core::sync::atomic::{Ordering, fence};
+use crate::atomic::{AtomicU32, Ordering, fence};
 use core::hint::unlikely;
 use syscall::error::*;
 
