@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use core::mem;
 use core::mem::MaybeUninit;
 use core::ops;
-use core::sync::atomic::AtomicU32;
-use core::sync::atomic::Ordering;
+use crate::atomic::{AtomicU32, Ordering, fence};
 use core::hint::unlikely;
 use syscall::error::*;
 
@@ -86,17 +85,35 @@ impl<T> RingHeader<T> {
         }
     }
 
+    /// Whether the consumer is waiting to be told about new items.
+    ///
+    /// Producers call this right after publishing items (storing the tail). The consumer, before
+    /// it sleeps, stores the waiting bit into the head and then re-reads the tail. Each side
+    /// stores one index and then loads the other, which Release and Acquire alone do not order:
+    /// both could read the old value (the store-buffer case, which x86 allows), the producer
+    /// would not notify and the consumer would sleep with an item in the ring. The `SeqCst`
+    /// fence here pairs with the one the waiting side issues after setting its bit.
     pub fn is_wait_head(&self) -> bool {
+        fence(Ordering::SeqCst);
         self.head.load(Ordering::Relaxed) & WAITING_BIT != 0
     }
+    /// Whether the producer is waiting for free slots; the counterpart of
+    /// [`is_wait_head`](Self::is_wait_head) for consumers that have just stored the head.
     pub fn is_wait_tail(&self) -> bool {
+        fence(Ordering::SeqCst);
         self.tail.load(Ordering::Relaxed) & WAITING_BIT != 0
     }
+    /// Set the consumer's waiting bit. A full fence follows, so a re-read of the tail after this
+    /// cannot miss an item whose producer did not see the bit.
     pub fn start_wait_head(&self) {
-        let _ = self.head.fetch_or(WAITING_BIT, Ordering::Relaxed);
+        let _ = self.head.fetch_or(WAITING_BIT, Ordering::SeqCst);
+        fence(Ordering::SeqCst);
     }
+    /// Set the producer's waiting bit, with the same full fence as
+    /// [`start_wait_head`](Self::start_wait_head).
     pub fn start_wait_tail(&self) {
-        let _ = self.tail.fetch_or(WAITING_BIT, Ordering::Relaxed);
+        let _ = self.tail.fetch_or(WAITING_BIT, Ordering::SeqCst);
+        fence(Ordering::SeqCst);
     }
 }
 
